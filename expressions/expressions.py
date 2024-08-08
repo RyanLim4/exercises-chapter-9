@@ -1,7 +1,9 @@
 """Implements an Expression Tree Class Hierachy and postvisitor function."""
 from numbers import Number as Num
+from functools import singledispatch
 
 
+# Exercise 9.6
 class Expression:
     """Parent of Terminal and Operator."""
 
@@ -163,6 +165,7 @@ class Pow(Operator):
     precedence = 1
 
 
+# Exercise 9.7
 def postvisitor(expr, fn, **kwargs):
     """Visit an Expression in postorder applying a function to every node.
 
@@ -190,10 +193,77 @@ def postvisitor(expr, fn, **kwargs):
                 unvisited_children.append(o)
 
         if unvisited_children:
+            # Not ready to visit this node yet.
+            # Need to visit children before e.
             stack.append(e)
             for child in unvisited_children:
                 stack.append(child)
         else:
+            # Any children of e have been visited, so we can visit it.
             visited[e] = fn(e, *(visited[o] for o in e.operands), **kwargs)
-
+    # When the stack is empty, we have visited every subexpression,
+    # including expr itself.
     return visited[expr]
+
+
+# Exercose 9.8
+@singledispatch
+def differentiate(expr, *o, **kwargs):
+    """Differentiate an expression node wrt a symbol.
+
+    Parameters
+    ----------
+    expr: Expression
+        The expression node to be evaluated.
+    *o: numbers.Number
+        The results of differentiating the operands of expr.
+    **kwargs:
+        Any keyword arguments required to evaluate specific types of
+        expression.
+    var: var
+        The var denoting what to differentiate wrt.
+    """
+    raise NotImplementedError(
+        f"Cannot differentiate a {type(expr).__name__}"
+    )
+
+
+@differentiate.register(Number)
+def _(expr, *o, **kwargs):
+    return Number(0.0)
+
+
+@differentiate.register(Symbol)
+def _(expr, *o, var, **kwargs):
+    if expr.value == var:
+        return Number(1.0)
+    else:
+        return Number(0.0)
+
+
+@differentiate.register(Add)
+def _(expr, *o, **kwargs):
+    return o[0] + o[1]
+
+
+@differentiate.register(Sub)
+def _(expr, *o, **kwargs):
+    return o[0] - o[1]
+
+
+@differentiate.register(Mul)
+def _(expr, *o, **kwargs):
+    return o[0] * expr.operands[1] + o[1] * expr.operands[0]
+
+
+@differentiate.register(Div)
+def _(expr, *o, **kwargs):
+    return (o[0] * expr.operands[1] - expr.operands[0] * o[1]) \
+        / (expr.operands[1]**Number(2))
+
+
+@differentiate.register(Pow)
+def _(expr, *o, **kwargs):
+    # Assumed expr.operands[1] is not var
+    return (expr.operands[1] * (expr.operands[0] ** (expr.operands[1] - 1)) *
+            o[0])
