@@ -1,4 +1,4 @@
-"""Module which implements an Expression Tree Class Hierachy."""
+"""Implements an Expression Tree Class Hierachy and postvisitor function."""
 from numbers import Number as Num
 
 
@@ -13,8 +13,6 @@ class Expression:
         """Add: self + expr."""
         if isinstance(expr, Num):
             expr = Number(expr)
-        if isinstance(self, Number):
-            return Number(self.value + expr.value)
         return Add(self, expr)
 
     def __radd__(self, expr):
@@ -26,8 +24,6 @@ class Expression:
         """Subtract: self - expr."""
         if isinstance(expr, Num):
             expr = Number(expr)
-        if isinstance(self, Number):
-            return Number(self.value - expr.value)
         return Sub(self, expr)
 
     def __rsub__(self, expr):
@@ -39,8 +35,6 @@ class Expression:
         """Multiple: self * expr."""
         if isinstance(expr, Num):
             expr = Number(expr)
-        if isinstance(self, Number):
-            return Number(self.value * expr.value)
         return Mul(self, expr)
 
     def __rmul__(self, expr):
@@ -52,8 +46,6 @@ class Expression:
         """Divide: self / expr."""
         if isinstance(expr, Num):
             expr = Number(expr)
-        if isinstance(self, Number):
-            return Number(self.value / expr.value)
         return Div(self, expr)
 
     def __rtruediv__(self, expr):
@@ -65,8 +57,6 @@ class Expression:
         """Power: self ^ expr."""
         if isinstance(expr, Num):
             expr = Number(expr)
-        if isinstance(self, Number):
-            return Number(self.value ** expr.value)
         return Pow(self, expr)
 
     def __rpow__(self, expr):
@@ -171,3 +161,39 @@ class Pow(Operator):
 
     exp_symbol = "^"
     precedence = 1
+
+
+def postvisitor(expr, fn, **kwargs):
+    """Visit an Expression in postorder applying a function to every node.
+
+    Parameters
+    ----------
+    expr: Expression
+        The expression to be visited.
+    fn: function(node, *o, **kwargs)
+        A function to be applied at each node. The function should take
+        the node to be visited as its first argument, and the results of
+        visiting its operands as any further positional arguments. Any
+        additional information that the visitor requires can be passed in
+        as keyword arguments.
+    **kwargs:
+        Any additional keyword arguments to be passed to fn.
+    """
+    stack = []
+    visited = {}
+    stack.append(expr)
+    while stack:
+        e = stack.pop()
+        unvisited_children = []
+        for o in e.operands:
+            if o not in visited:
+                unvisited_children.append(o)
+
+        if unvisited_children:
+            stack.append(e)
+            for child in unvisited_children:
+                stack.append(child)
+        else:
+            visited[e] = fn(e, *(visited[o] for o in e.operands), **kwargs)
+
+    return visited[expr]
