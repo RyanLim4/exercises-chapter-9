@@ -11,65 +11,110 @@ class Expression:
 
     def __add__(self, expr):
         """Add: self + expr."""
+        if isinstance(expr, Num):
+            expr = Number(expr)
+        if isinstance(self, Number):
+            return Number(self.value + expr.value)
         return Add(self, expr)
+
+    def __radd__(self, expr):
+        """Add: expr + self."""
+        expr = Number(expr)
+        return Add(expr, self)
 
     def __sub__(self, expr):
         """Subtract: self - expr."""
+        if isinstance(expr, Num):
+            expr = Number(expr)
+        if isinstance(self, Number):
+            return Number(self.value - expr.value)
         return Sub(self, expr)
+
+    def __rsub__(self, expr):
+        """Add: expr + self."""
+        expr = Number(expr)
+        return Sub(expr, self)
 
     def __mul__(self, expr):
         """Multiple: self * expr."""
+        if isinstance(expr, Num):
+            expr = Number(expr)
+        if isinstance(self, Number):
+            return Number(self.value * expr.value)
         return Mul(self, expr)
+
+    def __rmul__(self, expr):
+        """Multiply: expr * self."""
+        expr = Number(expr)
+        return Mul(expr, self)
 
     def __truediv__(self, expr):
         """Divide: self / expr."""
+        if isinstance(expr, Num):
+            expr = Number(expr)
+        if isinstance(self, Number):
+            return Number(self.value / expr.value)
         return Div(self, expr)
+
+    def __rtruediv__(self, expr):
+        """Divide: expr / self."""
+        expr = Number(expr)
+        return Div(expr, self)
 
     def __pow__(self, expr):
         """Power: self ^ expr."""
+        if isinstance(expr, Num):
+            expr = Number(expr)
+        if isinstance(self, Number):
+            return Number(self.value ** expr.value)
         return Pow(self, expr)
+
+    def __rpow__(self, expr):
+        """Pow: expr ^ self."""
+        expr = Number(expr)
+        return Pow(expr, self)
 
 
 class Terminal(Expression):
     """Terminal class: parent of Number and Symbol."""
 
-    precedence = 4
+    precedence = 0
 
-    def __init__(self, val):
+    def __init__(self, value):
         """Construct a terminal."""
-        self.val = val
-        super().__init__(())
+        self.value = value
+        super().__init__()
 
     def __repr__(self):
         """Repr method."""
-        return repr(self.val)
+        return repr(self.value)
 
     def __str__(self):
         """Str method."""
-        return str(self.val)
+        return str(self.value)
 
 
 class Number(Terminal):
     """Number class. A terminal represented by a Num."""
 
-    def __init__(self, val):
+    def __init__(self, value):
         """Construct a Number expression."""
-        if not isinstance(val, Num):
-            raise TypeError("Val input of type: " + type(val).__name__ +
+        if not isinstance(value, Num):
+            raise TypeError("Val input of type: " + type(value).__name__ +
                             "Expected val of type " + type(Number).__name__ +
                             ".")
-        super().__init__(val)
+        super().__init__(value)
 
 
 class Symbol(Terminal):
     """Symbol class. A terminal represented by a Str."""
 
-    def __init__(self, val):
+    def __init__(self, value):
         """Construct a Symbol."""
-        if not isinstance(val, str):
-            raise TypeError("Val input of type: " + type(val).__name__ +
+        if not isinstance(value, str):
+            raise TypeError("Val input of type: " + type(value).__name__ +
                             "Expected val of type " + type(str).__name__ + ".")
-        super().__init__(val)
+        super().__init__(value)
 
 
 class Operator(Expression):
@@ -81,8 +126,16 @@ class Operator(Expression):
 
     def __str__(self):
         """Str method."""
-        return str(self.operands[0]) + " " + self.exp_symbol\
-            + " " + str(self.operands[1])
+        a, b = self.operands[0], self.operands[1]
+        if a.precedence > self.precedence:
+            a_str = "(" + str(a) + ")"
+        else:
+            a_str = str(a)
+        if b.precedence > self.precedence:
+            b_str = "(" + str(b) + ")"
+        else:
+            b_str = str(b)
+        return a_str + " " + self.exp_symbol + " " + b_str
 
 
 class Add(Operator):
